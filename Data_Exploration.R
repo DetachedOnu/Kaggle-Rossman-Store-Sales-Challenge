@@ -71,11 +71,4 @@ store_data$Promo2SinceYear <- as.factor(store_data$Promo2SinceYear)
 str(training_data)
 str(testing_data)
 str(store_data)
-#Merging the datasets to get a feel of entire datasets at once
-dim(training_data)
-training_data <- merge(training_data,store_data)
-testing_data <- merge(testing_data,store_data)
 
-#Checking the merged datasets
-colnames(training_data)
-colnames(testing_data)
