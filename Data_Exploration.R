@@ -72,3 +72,30 @@ str(training_data)
 str(testing_data)
 str(store_data)
 
+#Now we split date column of both testing and training datasets into three separate columns
+#for day, month and year respectively, for increasing our predictors for better learning from
+#data
+training_data$Date <- as.Date(training_data$Date)
+
+training_data <- within(training_data, {
+  year <- as.integer(format(training_data$Date, "%Y"))
+  month <- as.integer(format(training_data$Date, "%m"))
+  day <- as.integer(format(training_data$Date, "%d"))
+})
+
+testing_data$Date <- as.Date(testing_data$Date)
+
+testing_data <- within(testing_data, {
+  year <- as.integer(format(testing_data$Date, "%Y"))
+  month <- as.integer(format(testing_data$Date, "%m"))
+  day <- as.integer(format(testing_data$Date, "%d"))
+})
+
+#Also we remove the id feature from testing data as it is not telling anything other than
+#serving as notation for (store,date) duplet. Along with Id feature, we now, drop down 
+#date variable as have already captured it's information separately in day, month and year respectively
+testing_data <- within(testing_data,rm(Id,Date))
+#Now, we also drop Date column from training_data for similar reasons as was the case with
+#testing data
+training_data <- within(training_data,rm(Date))
+
