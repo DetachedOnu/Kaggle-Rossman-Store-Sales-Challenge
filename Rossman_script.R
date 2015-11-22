@@ -1,5 +1,12 @@
 #setting the working directory to be home directory prior to beginning 
-setwd("~/")
+setwd("~/Desktop/Projects/Rossman/")
+
+#loading important libraries for data analysis ahead
+library(readr) 
+library(dplyr) 
+library(ggplot2) 
+library(caret) 
+library(randomForest)
 
 #reading the training data
 training_data <- read.csv("train.csv")
@@ -7,7 +14,10 @@ training_data <- read.csv("train.csv")
 #looking at structure and first few entries of training data
 str(training_data)
 dim(training_data)
-head(training_data)
+head(training_data,2)
+
+#getting descriptive statistics for train dataa
+summary(training_data)
 
 #reading the testing data
 testing_data <- read.csv("test.csv")
@@ -15,19 +25,25 @@ testing_data <- read.csv("test.csv")
 #looking at structure and first few entries of testing data
 str(testing_data)
 dim(testing_data)
-head(testing_data)
+head(testing_data,2)
+
+#getting descriptive statistics for test data
+summary(testing_data)
 
 #looking store data information
 store_data <- read.csv("store.csv")
 str(store_data)
 dim(store_data)
-head(store_data,5)
+head(store_data,2)
+
+#getting descriptive statistics for store data
+summary(store_data)
 
 #looking at sample_submission 
 sample_submission <- read.csv("sample_submission.csv")
 str(sample_submission)
 dim(sample_submission)
-head(sample_submission,5)
+head(sample_submission,2)
 
 #Preprocessing with training data
 
@@ -74,7 +90,6 @@ str(store_data)
 #for day, month and year respectively, for increasing our predictors for better learning from
 #data
 training_data$Date <- as.Date(training_data$Date)
-
 training_data <- within(training_data, {
   year <- as.integer(format(training_data$Date, "%Y"))
   month <- as.integer(format(training_data$Date, "%m"))
@@ -82,25 +97,35 @@ training_data <- within(training_data, {
 })
 
 testing_data$Date <- as.Date(testing_data$Date)
-
 testing_data <- within(testing_data, {
   year <- as.integer(format(testing_data$Date, "%Y"))
   month <- as.integer(format(testing_data$Date, "%m"))
   day <- as.integer(format(testing_data$Date, "%d"))
 })
 
+#Refactorizing training and test datasets again
+training_data$month <- as.factor(training_data$month)
+training_data$day <- as.factor(training_data$day)
+training_data$year <- as.factor(training_data$year)
+testing_data$month <- as.factor(testing_data$month)
+testing_data$day <- as.factor(testing_data$day)
+testing_data$year <- as.factor(testing_data$year)
+
 #we now, drop down date variable as have already captured it's information separately in day, month and year respectively
 testing_data <- within(testing_data,rm(Date))
+
 #Now, we also drop Date column from training_data for similar reasons as was the case with testing data
 training_data <- within(training_data,rm(Date))
 
 #getting descriptive stats for both training and testing datasets
 summary(training_data)
 summary(testing_data) 
+
 #Important Observations
 #Observation:1 We see here that testing data does not have representation of b and c factor levels in
 #the StateHoliday variable.
 #Observation 2: Test data has 11 NA's under the Open variable where as training data has none
+
 #Now, let us check out the stores where these NA's are occuring
 testing_data[is.na(Open),]
 #We see that missing data for Open is only at Store number 622.
@@ -117,9 +142,11 @@ subset(training_data,(training_data$Store == 622))
 testing_data$Open[is.na(testing_data$Open)] <- 1
 #Now, let us checkback if indeed we have now finished the imputations and removed all NA's
 subset(testing_data,(testing_data$Store == 622))
+
 #Now, we go for merging the data
 training_data <- merge(training_data,store_data)
 testing_data <- merge(testing_data,store_data)
+
 #After merging the data, let us look at the structure and description of data once again.
 str(training_data)
 str(testing_data)
@@ -129,18 +156,15 @@ summary(training_data)
 summary(testing_data)
 str(testing_data)
 
+#checking out customer statistics on training data
+summarise(group_by(training_data,Store), average_customers = mean(Customers),max_customers = max(Customers), stdev_customers=sd(Customers),average_sales = mean(Sales),max_sale = max(Sales), stdev_sales=sd(Sales))
+
 #Removing the days from training set when the stores were closed since when stores were closed,
 #there cannot be any sales
 closed_days <- subset(training_data,(training_data$Open == 0))
 sum(closed_days$Sales)
-#The above information shows that on days when stores were closed, there was no sales.So now,
-#we got to remove this data from training data, i.e. we got to keep only that part of data
-#for which we have open days
-no_open_days <- dim(training_data)[1] - dim(closed_days)[1]
-training_data <- subset(training_data,(training_data$Open == 1))
-#We remove closed days similarly for test dataset also.
-testing_data <- subset(testing_data,(testing_data$Open == 1))
-dim(testing_data)
+
+
 #Let us check the descriptive statistics after removing closed days sets from both testing 
 #and training data
 summary(training_data)
@@ -153,10 +177,7 @@ subset(training_data,(is.na(training_data$CompetitionOpenSinceMonth)))
 subset(training_data,(is.na(training_data$CompetitionOpenSinceYear)))
 subset(training_data,(is.na(training_data$Promo2SinceWeek)))
 subset(training_data,(is.na(training_data$Promo2SinceYear)))
-if(!require(dplyr)){
-  install.packages("dplyr")
-}
-library(dplyr)
+
 #checking when all the columns having missing values are simultaneously NA's.
 simulatneous_nas  <- filter(training_data,is.na(CompetitionDistance),is.na(CompetitionOpenSinceMonth),is.na(CompetitionOpenSinceYear),is.na(Promo2SinceWeek),is.na(Promo2SinceYear))
 #For visualising and imputation of missing data, we install VIM package
@@ -220,3 +241,4 @@ reg_tree <- rpart(Sales ~ .,data = training_data,method = "anova")
 reg_pred <- predict(reg_tree,test_data)
 testing_data$Sales <- reg_pred
 final_output <- select(testing_data,Id,Sales)
+write.csv(final_output,"final_output.csv",row.names = FALSE)
